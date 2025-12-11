@@ -1,0 +1,5 @@
+{
+  "name": "GlobalPulse Analytics",
+  "description": "A real-time data visualization platform inspired by Worldometers, featuring interactive dashboards, live counters, dataset comparisons, and AI-driven insights.",
+  "requestFramePermissions": []
+}

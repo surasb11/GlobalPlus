@@ -33,27 +33,30 @@ export interface ComparisonResult {
   insight: string;
 }
 
-export const compareMetricsAnalysis = async (
-  metricA: MetricData, valA: number, regionA: string, yearA: number,
-  metricB: MetricData, valB: number, regionB: string, yearB: number
-): Promise<ComparisonResult | null> => {
-  try {
-    const prompt = `
-      Compare these two statistics with their specific contexts:
-      
-      Item 1:
-      - Metric: ${metricA.label}
-      - Value: ${valA.toLocaleString()} ${metricA.unit}
-      - Context: ${regionA}, Year ${yearA}
+interface ComparisonItem {
+  label: string;
+  value: number;
+  unit: string;
+  context: string;
+}
 
-      Item 2:
-      - Metric: ${metricB.label}
-      - Value: ${valB.toLocaleString()} ${metricB.unit}
-      - Context: ${regionB}, Year ${yearB}
+export const compareMetricsAnalysis = async (items: ComparisonItem[]): Promise<ComparisonResult | null> => {
+  try {
+    const itemsText = items.map((item, index) => `
+      Item ${index + 1}:
+      - Metric: ${item.label}
+      - Value: ${item.value.toLocaleString()} ${item.unit}
+      - Context: ${item.context}
+    `).join('\n');
+
+    const prompt = `
+      Compare the following statistics:
+      
+      ${itemsText}
 
       Task:
-      1. Provide a detailed analysis paragraph (approx 60 words) explaining the relationship, contrast, or economic/social implication.
-      2. Provide a separate, punchy "Data Insight" summary (1 sentence) that highlights the key takeaway.
+      1. Provide a detailed analysis paragraph (approx 80-100 words) explaining the relationship, contrasts, or trends visible between these data points. If they are unrelated, explain the scale difference or economic implication of each.
+      2. Provide a separate, punchy "Data Insight" summary (1 sentence) that highlights the most interesting takeaway.
     `;
 
     const response = await ai.models.generateContent({

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  BarChart, Bar, LineChart, Line 
+  BarChart, Bar, LineChart, Line, Brush 
 } from 'recharts';
 import { MetricData, ChartType } from '../types';
 import { generateInsight } from '../services/geminiService';
-import { Sparkles, Loader2, BarChart2, TrendingUp, Activity } from 'lucide-react';
+import { Sparkles, Loader2, BarChart2, TrendingUp, Activity, ZoomIn } from 'lucide-react';
 import { useLiveData } from '../context/LiveDataContext';
 
 interface ChartWidgetProps {
@@ -34,6 +34,17 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ data }) => {
 
     const gradientId = `color${data.id}`;
 
+    // Common Brush component for all charts
+    const brush = (
+      <Brush 
+        dataKey="year" 
+        height={30} 
+        stroke="#94a3b8"
+        fill="#f1f5f9"
+        tickFormatter={(val) => val.toString()}
+      />
+    );
+
     switch (chartType) {
       case 'bar':
         return (
@@ -45,6 +56,7 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ data }) => {
               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
             />
             <Bar dataKey="value" fill={data.color} radius={[4, 4, 0, 0]} />
+            {brush}
           </BarChart>
         );
       case 'line':
@@ -57,6 +69,7 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ data }) => {
                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
             />
             <Line type="monotone" dataKey="value" stroke={data.color} strokeWidth={3} dot={{ r: 4, fill: data.color }} />
+            {brush}
           </LineChart>
         );
       case 'area':
@@ -76,6 +89,7 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ data }) => {
                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
             />
             <Area type="monotone" dataKey="value" stroke={data.color} fillOpacity={1} fill={`url(#${gradientId})`} />
+            {brush}
           </AreaChart>
         );
     }
@@ -86,7 +100,10 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ data }) => {
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <div>
           <h2 className="text-lg font-bold text-slate-800">{data.label} Trend</h2>
-          <p className="text-sm text-slate-500">Historical data analysis</p>
+          <div className="flex items-center text-sm text-slate-500 mt-1">
+             <ZoomIn size={14} className="mr-1 text-indigo-500" />
+             <span>Drag the slider below to pan & zoom</span>
+          </div>
         </div>
         
         <div className="flex bg-slate-100 p-1 rounded-lg">
@@ -111,7 +128,7 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ data }) => {
         </div>
       </div>
 
-      <div className="h-[300px] w-full">
+      <div className="h-[350px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           {renderChart()}
         </ResponsiveContainer>

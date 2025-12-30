@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { 
   LayoutDashboard, 
@@ -8,7 +9,11 @@ import {
   X,
   Search,
   Bell,
-  Globe
+  Globe,
+  ShieldCheck,
+  FileText,
+  ChevronRight,
+  Map
 } from 'lucide-react';
 import { MOCK_DATA, CATEGORIES, REGIONS } from './constants';
 import { CategoryId } from './types';
@@ -31,8 +36,7 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'dashboard' | 'compare'>('dashboard');
   
-  // Use live data context if needed for filters, but mostly passed down
-  const { selectedRegion } = useLiveData();
+  const { selectedRegion, liveValues, getDisplayValue } = useLiveData();
 
   const filteredMetrics = useMemo(() => {
     if (selectedCategory === 'all') return MOCK_DATA;
@@ -44,9 +48,7 @@ function App() {
   const handleMetricClick = (id: string) => {
     setActiveMetricId(id);
     setViewMode('dashboard');
-    if (window.innerWidth < 768) {
-      document.getElementById('chart-section')?.scrollIntoView({ behavior: 'smooth' });
-    }
+    document.getElementById('chart-section')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
   const getCategoryIcon = (categoryId: string) => {
@@ -54,10 +56,29 @@ function App() {
     return category ? category.icon : Globe;
   };
 
+  // Calculate regional breakdown for active metric
+  const regionalBreakdown = useMemo(() => {
+    const baseValue = liveValues[activeMetric.id] || activeMetric.baseValue;
+    return REGIONS.map(region => {
+      let multiplier = 1;
+      if (region.code !== 'WORLD') {
+        if (activeMetric.regionalMultipliers && activeMetric.regionalMultipliers[region.code]) {
+          multiplier = activeMetric.regionalMultipliers[region.code];
+        } else {
+          const heuristic: Record<string, number> = { 'USA': 0.25, 'CHN': 0.18, 'IND': 0.04, 'EU': 0.17, 'BRA': 0.02 };
+          multiplier = heuristic[region.code] || 0.01;
+        }
+      }
+      return {
+        ...region,
+        value: baseValue * multiplier
+      };
+    }).sort((a, b) => b.value - a.value);
+  }, [activeMetric, liveValues]);
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
       
-      {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-20 md:hidden"
@@ -65,13 +86,11 @@ function App() {
         />
       )}
 
-      {/* Sidebar */}
       <aside className={`
         fixed md:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <div className="flex flex-col h-full">
-          {/* Logo */}
           <div className="h-20 flex items-center px-8 border-b border-slate-100">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center mr-3 shadow-indigo-200 shadow-md">
               <Globe className="text-white" size={20} />
@@ -81,7 +100,6 @@ function App() {
             </span>
           </div>
 
-          {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
             <div className="mb-2 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Main Menu
@@ -119,7 +137,6 @@ function App() {
             ))}
           </nav>
 
-          {/* Bottom Actions */}
           <div className="p-4 border-t border-slate-100">
             <button className="w-full flex items-center px-4 py-3 text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition-colors">
               <Settings size={20} className="mr-3" />
@@ -133,10 +150,8 @@ function App() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden">
         
-        {/* Top Header */}
         <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 md:px-10 z-10 shrink-0">
           <div className="flex items-center">
             <button 
@@ -167,27 +182,24 @@ function App() {
             
             <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
               <div className="text-right hidden md:block">
-                <div className="text-sm font-bold text-slate-800">Admin User</div>
+                <div className="text-sm font-bold text-slate-800">SuraSB</div>
                 <div className="text-xs text-slate-500">Pro Account</div>
               </div>
               <img 
-                src="https://picsum.photos/40/40" 
+                src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
                 alt="Profile" 
-                className="w-10 h-10 rounded-full border-2 border-white shadow-sm"
+                className="w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover grayscale"
               />
             </div>
           </div>
         </header>
 
-        {/* Filter Bar */}
         <FilterBar />
 
-        {/* Scrollable Dashboard Area */}
         <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
           
           {viewMode === 'dashboard' ? (
             <>
-              {/* Stat Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 {filteredMetrics.map((metric) => {
                   const Icon = getCategoryIcon(metric.category);
@@ -203,57 +215,87 @@ function App() {
                 })}
               </div>
 
-              {/* Main Chart Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8" id="chart-section">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 scroll-mt-24" id="chart-section">
                 <div className="lg:col-span-2 h-[500px]">
                   <ChartWidget data={activeMetric} />
                 </div>
                 
-                {/* Side Panel / Details */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-                  <h3 className="text-lg font-bold text-slate-800 mb-4">Metric Details</h3>
+                  <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <Map size={20} className="text-indigo-600" />
+                    Regional Breakdown
+                  </h3>
                   
-                  <div className="space-y-6">
-                    <div className="p-4 bg-slate-50 rounded-xl">
-                      <div className="text-sm text-slate-500 mb-1">Scope</div>
-                      <div className="font-medium capitalize flex items-center gap-2">
-                        <Globe size={16} className="text-indigo-500" />
-                        {selectedRegion === 'WORLD' ? 'Global' : REGIONS.find(r => r.code === selectedRegion)?.label}
+                  <div className="space-y-4 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
+                    {regionalBreakdown.map((reg) => (
+                      <div key={reg.code} className="group flex flex-col p-3 bg-slate-50 rounded-xl transition-all hover:bg-indigo-50 hover:shadow-sm">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: activeMetric.color }}></span>
+                            {reg.label}
+                          </span>
+                          <span className="text-sm font-black text-indigo-600">
+                            {Math.floor(reg.value).toLocaleString()}
+                            <span className="text-[10px] ml-1 font-normal text-slate-400">{activeMetric.unit}</span>
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 bg-slate-200 rounded-full mt-1 overflow-hidden">
+                          <div 
+                            className="h-full transition-all duration-1000" 
+                            style={{ 
+                              width: `${(reg.value / (regionalBreakdown[0].value || 1)) * 100}%`,
+                              backgroundColor: activeMetric.color 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 space-y-4 pt-4 border-t border-slate-100">
+                    <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                      <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Active Scope</div>
+                      <div className="font-bold text-slate-800 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Globe size={16} className="text-indigo-600" />
+                          {selectedRegion === 'WORLD' ? 'Global' : REGIONS.find(r => r.code === selectedRegion)?.label}
+                        </div>
+                        <ChevronRight size={14} className="text-slate-400" />
                       </div>
                     </div>
 
-                    <div className="p-4 bg-slate-50 rounded-xl">
-                      <div className="text-sm text-slate-500 mb-1">Growth Rate</div>
-                      <div className="font-medium text-green-600 flex items-center">
-                        +{activeMetric.growthRate} <span className="text-slate-400 text-xs ml-1">per second</span>
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-slate-50 rounded-xl">
-                      <div className="text-sm text-slate-500 mb-1">Description</div>
-                      <p className="text-sm text-slate-700 leading-relaxed">
-                        {activeMetric.description}
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Summary</div>
+                      <p className="text-xs text-slate-600 leading-relaxed italic">
+                        "{activeMetric.description.slice(0, 100)}..."
                       </p>
                     </div>
 
-                    <div className="mt-auto pt-4">
-                       <button className="w-full py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200">
-                         Download Report
-                       </button>
-                    </div>
+                    <button className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg hover:shadow-indigo-100 active:scale-95">
+                      Export Metric Report
+                    </button>
                   </div>
                 </div>
               </div>
             </>
           ) : (
-            /* Comparison View */
-            <div className="max-w-5xl mx-auto">
+            <div className="max-w-6xl mx-auto">
               <ComparisonTool metrics={MOCK_DATA} />
             </div>
           )}
 
-          <footer className="mt-12 text-center text-slate-400 text-sm pb-4">
-            &copy; 2024 GlobalPulse Analytics. Powered by Gemini AI.
+          <footer className="mt-12 flex flex-col md:flex-row justify-between items-center text-slate-400 text-sm pb-4 border-t border-slate-100 pt-8">
+            <div className="mb-4 md:mb-0 font-medium">
+              &copy; 2024 GlobalPulse Analytics. Engineered by Senior Frontend AI.
+            </div>
+            <div className="flex gap-6">
+              <a href="#" className="hover:text-slate-600 flex items-center gap-1 transition-colors">
+                <ShieldCheck size={14} /> Data Sovereignty
+              </a>
+              <a href="#" className="hover:text-slate-600 flex items-center gap-1 transition-colors">
+                <FileText size={14} /> Methodology
+              </a>
+            </div>
           </footer>
         </div>
 

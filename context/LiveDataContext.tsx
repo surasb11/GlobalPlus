@@ -2,11 +2,6 @@ import React, { createContext, useContext, useEffect, useState, useRef } from 'r
 import { MOCK_DATA } from '../constants';
 import { MetricData, RegionCode } from '../types';
 
-interface LiveDataState {
-  values: Record<string, number>;
-  timestamp: number;
-}
-
 interface LiveDataContextType {
   liveValues: Record<string, number>;
   selectedRegion: RegionCode;
@@ -18,34 +13,50 @@ interface LiveDataContextType {
 
 const LiveDataContext = createContext<LiveDataContextType | undefined>(undefined);
 
-// Standalone helper calculation for use outside of context if needed
-export const calculateValue = (metric: MetricData, year: number, region: string) => {
-  // 1. Calculate Base for Year
-  const isCurrentYear = year === new Date().getFullYear();
-  let val = metric.baseValue;
-  
-  if (isCurrentYear) {
-    // For live current year, we approximate based on "now" relative to a start of year
-    // Since we don't have exact start of year timestamp here easily without passing it,
-    // we will use the generic linear projection from the mock data start.
-    // However, to keep it consistent with the "Live" ticker which adds elapsed seconds:
-    // We will just use the baseValue as the "start of 2024" snapshot for simplicity in static calc,
-    // or project it to mid-year. 
-    // Better approach for consistency with `generateHistory`:
-    const diffYears = year - 2024;
-    val = metric.baseValue + (metric.growthRate * diffYears * 31536000); 
-  } else {
-    // Time travel logic
-    const diffYears = year - 2024;
-    val = metric.baseValue + (metric.growthRate * diffYears * 31536000); 
+// Standalone helper calculation for use outside of context
+export const calculateValue = (metric: MetricData, year: number, region: string, month?: number, ageRange?: string, gender?: string) => {
+  let diffYears = year - 2024;
+
+  if (month !== undefined) {
+    diffYears = (year - 2024) - ((12 - month) / 12);
   }
 
-  // 2. Apply Regional Multiplier
+  let val = metric.baseValue + (metric.growthRate * diffYears * 31536000); 
+
+  // Demographic heuristics for Life Expectancy
+  if (metric.id === 'life-expectancy') {
+    // 1. Age-based heuristics
+    if (ageRange && ageRange !== 'all') {
+      const yearWeight = (year - 1900) / 124; // 0 at 1900, 1 at 2024
+      switch (ageRange) {
+        case '0-5':
+          // Standard metric, no adjustment needed relative to base
+          break;
+        case '5-20':
+          val += (1 - yearWeight) * 15; 
+          break;
+        case '20-60':
+          val += 5 + (yearWeight * 5);
+          break;
+        case '60+':
+          val = 15 + (yearWeight * 15); 
+          break;
+      }
+    }
+
+    // 2. Gender-based heuristics (Standard gap of ~5 years)
+    if (gender === 'male') {
+      val -= 2.5;
+    } else if (gender === 'female') {
+      val += 2.5;
+    }
+  }
+
+  // 3. Apply Regional Multiplier
   if (region !== 'WORLD') {
     if (metric.regionalMultipliers && metric.regionalMultipliers[region]) {
       val = val * metric.regionalMultipliers[region];
     } else {
-      // Fallback heuristic
       const heuristic: Record<string, number> = { 'USA': 0.25, 'CHN': 0.18, 'IND': 0.04, 'EU': 0.17, 'BRA': 0.02 };
       val = val * (heuristic[region] || 0.01);
     }
@@ -60,69 +71,52 @@ export const LiveDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   
   const startTimeRef = useRef<number>(Date.now());
-  const animationFrameRef = useRef<number>();
+  const intervalRef = useRef<number>(0); 
 
-  // Initialize base values
   useEffect(() => {
     const initial: Record<string, number> = {};
     MOCK_DATA.forEach(m => initial[m.id] = m.baseValue);
     setLiveValues(initial);
   }, []);
 
-  // The "WebSocket" simulation - Ticker
   useEffect(() => {
-    const animate = () => {
+    const TICK_MS = 3000; 
+
+    const updateValues = () => {
       const now = Date.now();
       const elapsedSeconds = (now - startTimeRef.current) / 1000;
-      
       const nextValues: Record<string, number> = {};
       
       MOCK_DATA.forEach(metric => {
-        // Core calculation: Base + (Growth * Time)
-        // Adjust for "Year" selection: if not current year, we stop "ticking" and show static projected value
         const isCurrentYear = selectedYear === new Date().getFullYear();
-        
         let calculatedValue;
         
         if (isCurrentYear) {
           calculatedValue = metric.baseValue + (metric.growthRate * elapsedSeconds);
         } else {
-          // Time travel logic
           const diffYears = selectedYear - 2024;
           calculatedValue = metric.baseValue + (metric.growthRate * diffYears * 31536000); 
         }
-
         nextValues[metric.id] = calculatedValue;
       });
-
       setLiveValues(nextValues);
-      animationFrameRef.current = requestAnimationFrame(animate);
     };
 
-    animationFrameRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    };
+    updateValues();
+    intervalRef.current = window.setInterval(updateValues, TICK_MS);
+    return () => window.clearInterval(intervalRef.current);
   }, [selectedYear]);
 
-  // Helper to get value with filters applied
   const getDisplayValue = (metric: MetricData) => {
     const baseVal = liveValues[metric.id] || metric.baseValue;
-    
-    // Apply Region Multiplier
     if (selectedRegion !== 'WORLD' && metric.regionalMultipliers) {
       const multiplier = metric.regionalMultipliers[selectedRegion] || 0;
       return baseVal * multiplier;
     }
-    
-    // Fallback if no specific multiplier but region selected (rough generic heuristic for demo)
     if (selectedRegion !== 'WORLD' && !metric.regionalMultipliers) {
-      // Rough GDP-based heuristic if no data
       const heuristic = { 'USA': 0.25, 'CHN': 0.18, 'IND': 0.04, 'EU': 0.17, 'BRA': 0.02 };
       return baseVal * (heuristic[selectedRegion] || 0.01);
     }
-
     return baseVal;
   };
 

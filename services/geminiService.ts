@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { MetricData } from "../types";
 
@@ -40,7 +41,7 @@ interface ComparisonItem {
   context: string;
 }
 
-export const compareMetricsAnalysis = async (items: ComparisonItem[]): Promise<ComparisonResult | null> => {
+export const compareMetricsAnalysis = async (items: ComparisonItem[], customInstruction?: string): Promise<ComparisonResult | null> => {
   try {
     const itemsText = items.map((item, index) => `
       Item ${index + 1}:
@@ -55,7 +56,7 @@ export const compareMetricsAnalysis = async (items: ComparisonItem[]): Promise<C
       ${itemsText}
 
       Task:
-      1. Provide a detailed analysis paragraph (approx 80-100 words) explaining the relationship, contrasts, or trends visible between these data points. If they are unrelated, explain the scale difference or economic implication of each.
+      1. Provide a detailed analysis paragraph (approx 80-100 words) explaining the relationship, contrasts, or trends visible between these data points. ${customInstruction || "If they are unrelated, explain the scale difference or economic implication of each."}
       2. Provide a separate, punchy "Data Insight" summary (1 sentence) that highlights the most interesting takeaway.
     `;
 

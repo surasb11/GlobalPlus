@@ -48,6 +48,9 @@ const POP_MULTIPLIERS = { 'USA': 0.042, 'CHN': 0.17, 'IND': 0.175, 'EU': 0.05, '
 const GDP_MULTIPLIERS = { 'USA': 0.25, 'CHN': 0.18, 'IND': 0.035, 'EU': 0.17, 'BRA': 0.02 };
 const TECH_MULTIPLIERS = { 'USA': 0.30, 'CHN': 0.25, 'IND': 0.15, 'EU': 0.20, 'BRA': 0.05 };
 
+// Specific multipliers for rates (where 1.0 is global avg)
+const BIRTH_RATE_MULTIPLIERS = { 'USA': 0.65, 'CHN': 0.6, 'IND': 0.96, 'EU': 0.53, 'BRA': 0.77 };
+
 export const MOCK_DATA: MetricData[] = [
   // --- DEMOGRAPHICS ---
   {
@@ -63,16 +66,33 @@ export const MOCK_DATA: MetricData[] = [
     regionalMultipliers: POP_MULTIPLIERS
   },
   {
-    id: 'births-year',
-    label: 'Births This Year',
-    baseValue: 115000000,
-    growthRate: 4.5,
-    unit: 'births',
+    id: 'birth-rate',
+    label: 'Birth Rate',
+    baseValue: 16.9,
+    growthRate: -0.000000008, // Slow decline
+    unit: 'per 1,000',
     color: '#8b5cf6',
     category: 'population',
-    description: 'Cumulative births since Jan 1st.',
-    history: generateHistory(134000000, 4.5, 50),
-    regionalMultipliers: POP_MULTIPLIERS
+    description: 'The average number of live births per 1,000 people per year. The global birth rate has nearly halved since 1950.',
+    history: [
+      { year: '1950', value: 36.9 },
+      { year: '1955', value: 35.4 },
+      { year: '1960', value: 33.9 },
+      { year: '1965', value: 33.2 },
+      { year: '1970', value: 30.5 },
+      { year: '1975', value: 28.4 },
+      { year: '1980', value: 27.6 },
+      { year: '1985', value: 26.6 },
+      { year: '1990', value: 25.4 },
+      { year: '1995', value: 23.9 },
+      { year: '2000', value: 22.2 },
+      { year: '2005', value: 21.2 },
+      { year: '2010', value: 20.1 },
+      { year: '2015', value: 19.1 },
+      { year: '2020', value: 17.7 },
+      { year: '2024', value: 16.9 }
+    ],
+    regionalMultipliers: BIRTH_RATE_MULTIPLIERS
   },
   {
     id: 'deaths-year',

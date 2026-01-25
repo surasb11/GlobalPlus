@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { MetricData } from '../types';
 import { REGIONS, CATEGORIES } from '../constants';
@@ -186,7 +187,13 @@ const ComparisonTool: React.FC<ComparisonToolProps> = ({ metrics }) => {
       };
     });
 
-    const data = await compareMetricsAnalysis(items);
+    let customInstruction = undefined;
+    // Check if we are specifically comparing life expectancy to add specialized insight
+    if (datasets.some(ds => ds.metricId === 'life-expectancy')) {
+      customInstruction = "Focus specifically on the change in age distribution of deaths (e.g., 'the average age of death has increased by X years, shifting from younger demographics to older ones') and the implications for population structure.";
+    }
+
+    const data = await compareMetricsAnalysis(items, customInstruction);
     setResult(data);
     setLoading(false);
   };
@@ -531,7 +538,9 @@ const ComparisonTool: React.FC<ComparisonToolProps> = ({ metrics }) => {
                          const periodText = ds?.timeMode === 'point' ? `${ds.year}` : `${getMonthLabel(ds?.startMonth || 1)} ${ds?.startYear} - ${getMonthLabel(ds?.endMonth || 12)} ${ds?.endYear}`;
                          const ageText = ds?.metricId === 'life-expectancy' ? AGE_DEMOGRAPHICS.find(a => a.id === ds.ageRange)?.label : '';
                          const genderText = ds?.metricId === 'life-expectancy' ? GENDER_OPTIONS.find(g => g.id === ds.gender)?.label : '';
-                         return [`${Math.floor(value).toLocaleString()} ${m?.unit}`, `${m?.label} ${ageText} ${genderText} (${periodText})`];
+                         // Update formatter to show decimals for rates < 100
+                         const displayValue = value < 100 ? value.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 }) : Math.floor(value).toLocaleString();
+                         return [`${displayValue} ${m?.unit}`, `${m?.label} ${ageText} ${genderText} (${periodText})`];
                        }}
                      />
                      {datasets.map(ds => (
@@ -548,7 +557,9 @@ const ComparisonTool: React.FC<ComparisonToolProps> = ({ metrics }) => {
                        formatter={(value: number, name: string) => {
                          const ds = datasets.find(d => `dataset_${d.id}` === name);
                          const m = getMetric(ds?.metricId || '');
-                         return [`${Math.floor(value).toLocaleString()} ${m?.unit}`, `${m?.label}`];
+                         // Update formatter to show decimals for rates < 100
+                         const displayValue = value < 100 ? value.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 }) : Math.floor(value).toLocaleString();
+                         return [`${displayValue} ${m?.unit}`, `${m?.label}`];
                        }}
                      />
                      {datasets.map(ds => (

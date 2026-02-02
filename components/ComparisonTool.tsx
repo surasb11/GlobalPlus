@@ -606,4 +606,4 @@ const ComparisonTool: React.FC<ComparisonToolProps> = ({ metrics }) => {
   );
 };
 
-export default ComparisonTool;
+export default React.memo(ComparisonTool);

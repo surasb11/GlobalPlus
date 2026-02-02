@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { MOCK_DATA } from '../constants';
 import { MetricData, RegionCode } from '../types';
 
@@ -107,7 +107,7 @@ export const LiveDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => window.clearInterval(intervalRef.current);
   }, [selectedYear]);
 
-  const getDisplayValue = (metric: MetricData) => {
+  const getDisplayValue = useCallback((metric: MetricData) => {
     const baseVal = liveValues[metric.id] || metric.baseValue;
     if (selectedRegion !== 'WORLD' && metric.regionalMultipliers) {
       const multiplier = metric.regionalMultipliers[selectedRegion] || 0;
@@ -118,7 +118,7 @@ export const LiveDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return baseVal * (heuristic[selectedRegion] || 0.01);
     }
     return baseVal;
-  };
+  }, [liveValues, selectedRegion]);
 
   return (
     <LiveDataContext.Provider value={{ 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { MOCK_DATA } from '../constants';
 import { MetricData, RegionCode } from '../types';
 
@@ -114,21 +114,23 @@ export const LiveDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return baseVal * multiplier;
     }
     if (selectedRegion !== 'WORLD' && !metric.regionalMultipliers) {
-      const heuristic = { 'USA': 0.25, 'CHN': 0.18, 'IND': 0.04, 'EU': 0.17, 'BRA': 0.02 };
+      const heuristic: Record<string, number> = { 'USA': 0.25, 'CHN': 0.18, 'IND': 0.04, 'EU': 0.17, 'BRA': 0.02 };
       return baseVal * (heuristic[selectedRegion] || 0.01);
     }
     return baseVal;
   }, [liveValues, selectedRegion]);
 
+  const value = useMemo(() => ({
+    liveValues,
+    selectedRegion,
+    selectedYear,
+    setRegion: setSelectedRegion,
+    setYear: setSelectedYear,
+    getDisplayValue
+  }), [liveValues, selectedRegion, selectedYear, getDisplayValue]);
+
   return (
-    <LiveDataContext.Provider value={{ 
-      liveValues, 
-      selectedRegion, 
-      selectedYear,
-      setRegion: setSelectedRegion, 
-      setYear: setSelectedYear,
-      getDisplayValue 
-    }}>
+    <LiveDataContext.Provider value={value}>
       {children}
     </LiveDataContext.Provider>
   );

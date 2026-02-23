@@ -15,7 +15,7 @@ import {
   ChevronRight,
   Map
 } from 'lucide-react';
-import { MOCK_DATA, CATEGORIES, REGIONS } from './constants';
+import { MOCK_DATA, CATEGORIES, REGIONS, METRIC_MAP, CATEGORY_MAP, REGIONAL_HEURISTICS } from './constants';
 import { CategoryId } from './types';
 import StatCard from './components/StatCard';
 import ChartWidget from './components/ChartWidget';
@@ -43,7 +43,9 @@ function App() {
     return MOCK_DATA.filter(m => m.category === selectedCategory);
   }, [selectedCategory]);
 
-  const activeMetric = MOCK_DATA.find(m => m.id === activeMetricId) || MOCK_DATA[0];
+  const activeMetric = useMemo(() =>
+    METRIC_MAP.get(activeMetricId) || MOCK_DATA[0],
+  [activeMetricId]);
 
   const handleMetricClick = (id: string) => {
     setActiveMetricId(id);
@@ -52,7 +54,7 @@ function App() {
   };
 
   const getCategoryIcon = (categoryId: string) => {
-    const category = CATEGORIES.find(c => c.id === categoryId);
+    const category = CATEGORY_MAP.get(categoryId as CategoryId);
     return category ? category.icon : Globe;
   };
 
@@ -65,8 +67,7 @@ function App() {
         if (activeMetric.regionalMultipliers && activeMetric.regionalMultipliers[region.code]) {
           multiplier = activeMetric.regionalMultipliers[region.code];
         } else {
-          const heuristic: Record<string, number> = { 'USA': 0.25, 'CHN': 0.18, 'IND': 0.04, 'EU': 0.17, 'BRA': 0.02 };
-          multiplier = heuristic[region.code] || 0.01;
+          multiplier = REGIONAL_HEURISTICS[region.code] || 0.01;
         }
       }
       return {

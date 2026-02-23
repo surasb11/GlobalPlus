@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { MOCK_DATA } from '../constants';
+import { MOCK_DATA, REGIONAL_HEURISTICS } from '../constants';
 import { MetricData, RegionCode } from '../types';
 
 interface LiveDataContextType {
@@ -57,8 +57,7 @@ export const calculateValue = (metric: MetricData, year: number, region: string,
     if (metric.regionalMultipliers && metric.regionalMultipliers[region]) {
       val = val * metric.regionalMultipliers[region];
     } else {
-      const heuristic: Record<string, number> = { 'USA': 0.25, 'CHN': 0.18, 'IND': 0.04, 'EU': 0.17, 'BRA': 0.02 };
-      val = val * (heuristic[region] || 0.01);
+      val = val * (REGIONAL_HEURISTICS[region] || 0.01);
     }
   }
 
@@ -114,8 +113,7 @@ export const LiveDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return baseVal * multiplier;
     }
     if (selectedRegion !== 'WORLD' && !metric.regionalMultipliers) {
-      const heuristic: Record<string, number> = { 'USA': 0.25, 'CHN': 0.18, 'IND': 0.04, 'EU': 0.17, 'BRA': 0.02 };
-      return baseVal * (heuristic[selectedRegion] || 0.01);
+      return baseVal * (REGIONAL_HEURISTICS[selectedRegion] || 0.01);
     }
     return baseVal;
   }, [liveValues, selectedRegion]);

@@ -24,6 +24,14 @@ export const REGIONS: { code: RegionCode; label: string }[] = [
   { code: 'BRA', label: 'Brazil' },
 ];
 
+export const REGIONAL_HEURISTICS: Record<string, number> = {
+  'USA': 0.25,
+  'CHN': 0.18,
+  'IND': 0.04,
+  'EU': 0.17,
+  'BRA': 0.02
+};
+
 // Helper to generate mock history
 const generateHistory = (base: number, growth: number, steps: number = 100) => {
   const data = [];
@@ -156,3 +164,11 @@ export const MOCK_DATA: MetricData[] = [
     } 
   }
 ];
+
+export const METRIC_MAP = new Map<string, MetricData>(
+  MOCK_DATA.map(metric => [metric.id, metric])
+);
+
+export const CATEGORY_MAP = new Map<CategoryId, typeof CATEGORIES[number]>(
+  CATEGORIES.map(cat => [cat.id, cat])
+);

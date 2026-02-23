@@ -58,9 +58,8 @@ function App() {
     return category ? category.icon : Globe;
   };
 
-  // Calculate regional breakdown for active metric
-  const regionalBreakdown = useMemo(() => {
-    const baseValue = liveValues[activeMetric.id] || activeMetric.baseValue;
+  // Pre-calculate regional multipliers
+  const regionMultipliers = useMemo(() => {
     return REGIONS.map(region => {
       let multiplier = 1;
       if (region.code !== 'WORLD') {
@@ -70,12 +69,18 @@ function App() {
           multiplier = REGIONAL_HEURISTICS[region.code] || 0.01;
         }
       }
-      return {
-        ...region,
-        value: baseValue * multiplier
-      };
-    }).sort((a, b) => b.value - a.value);
-  }, [activeMetric, liveValues]);
+      return { ...region, multiplier };
+    });
+  }, [activeMetric]);
+
+  // Calculate regional breakdown for active metric
+  const regionalBreakdown = useMemo(() => {
+    const baseValue = liveValues[activeMetric.id] || activeMetric.baseValue;
+    return regionMultipliers.map(({ multiplier, ...region }) => ({
+      ...region,
+      value: baseValue * multiplier
+    })).sort((a, b) => b.value - a.value);
+  }, [activeMetric, liveValues, regionMultipliers]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">

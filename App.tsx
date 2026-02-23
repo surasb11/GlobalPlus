@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   LayoutDashboard, 
   PieChart, 
@@ -47,11 +47,11 @@ function App() {
     METRIC_MAP.get(activeMetricId) || MOCK_DATA[0],
   [activeMetricId]);
 
-  const handleMetricClick = (id: string) => {
+  const handleMetricClick = useCallback((id: string) => {
     setActiveMetricId(id);
     setViewMode('dashboard');
     document.getElementById('chart-section')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  };
+  }, []);
 
   const getCategoryIcon = (categoryId: string) => {
     const category = CATEGORY_MAP.get(categoryId as CategoryId);
@@ -208,8 +208,8 @@ function App() {
                     <StatCard 
                       key={metric.id}
                       metric={metric}
-                      icon={<Icon size={24} />} 
-                      onClick={() => handleMetricClick(metric.id)}
+                      icon={Icon}
+                      onMetricClick={handleMetricClick}
                       isActive={activeMetricId === metric.id}
                     />
                   );

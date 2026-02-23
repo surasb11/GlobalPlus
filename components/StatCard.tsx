@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { TrendingUp, Activity } from 'lucide-react';
 import { MetricData } from '../types';
@@ -6,15 +5,15 @@ import { useLiveData } from '../context/LiveDataContext';
 
 interface StatCardProps {
   metric: MetricData;
-  icon: React.ReactNode;
-  onClick: () => void;
+  icon: React.ElementType;
+  onMetricClick: (id: string) => void;
   isActive: boolean;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ 
   metric, 
-  icon,
-  onClick,
+  icon: Icon,
+  onMetricClick,
   isActive
 }) => {
   const { getDisplayValue, selectedYear } = useLiveData();
@@ -31,7 +30,7 @@ const StatCard: React.FC<StatCardProps> = ({
 
   return (
     <div 
-      onClick={onClick}
+      onClick={() => onMetricClick(metric.id)}
       className={`
         relative p-3 rounded-xl cursor-pointer transition-all duration-300 border
         ${isActive 
@@ -51,7 +50,7 @@ const StatCard: React.FC<StatCardProps> = ({
             className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-300"
             style={{ backgroundColor: `${metric.color}15`, color: metric.color }}
           >
-            {React.cloneElement(icon as React.ReactElement, { size: 18, strokeWidth: 2.5 })}
+            <Icon size={18} strokeWidth={2.5} />
           </div>
 
           {/* Value - 1rem size */}
@@ -70,4 +69,4 @@ const StatCard: React.FC<StatCardProps> = ({
   );
 };
 
-export default StatCard;
+export default React.memo(StatCard);
